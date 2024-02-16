@@ -457,6 +457,8 @@ end
 local function standardize_role(role)
   if role == "func" or role == "meth" then
     return "function"
+  elseif role == "attr" then
+    return "attribute"
   elseif role == "mod" then
     return "module"
   end
