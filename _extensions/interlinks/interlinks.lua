@@ -511,12 +511,34 @@ local function as_incomplete_link(str)
   return ilink
 end
 
+--- Get the link text
+---
+--- @param link table pandoc link
+--- @param ilink ilinkT incomplete link representation of link target
+--- @return string | userdata
+local function get_link_text(link, ilink)
+  if #link.content > 0 then
+    return pandoc.utils.stringify(link.content)
+  elseif ilink.shortened then
+    local tokens = split_on(ilink.name, ".")
+    return tokens[#tokens]
+  end
+
+  return ilink.name
+end
+
 
 --- Get the string content a link
---- Used as a fallback for broken links
+---
 --- @param link table pandoc link
-local function get_link_content(link)
-  return pandoc.Str(pandoc.utils.stringify(link.content))
+--- @param ilink ilinkT incomplete link representation of link target
+--- @return string | userdata # string or Code object.
+local function do_broken_interlink(link, ilink)
+  local text = get_link_text(link, ilink)
+  if #link.content == 0 then
+    text = pandoc.Code(text)
+  end
+  return text
 end
 
 
@@ -526,22 +548,13 @@ end
 --- @param ilink ilinkT incomplete link representation of link target
 --- @param clink clinkT complete link representation of link target
 local function do_interlink(link, ilink, clink)
-  local original_text = pandoc.utils.stringify(link.content)
-
-  -- determine replacement, use if link text is not specified
-  local replacement
-  if ilink.shortened then
-    local tokens = split_on(ilink.name, ".")
-    replacement = tokens[#tokens]
-  else
-    replacement = ilink.name
+  local text = get_link_text(link, ilink)
+  if #link.content == 0 then
+    text = pandoc.Code(text)
   end
 
-  -- set link text
-  if replacement and original_text == "" then
-    link.content = pandoc.Code(replacement)
-  end
-
+  link.content = text
+  -- link.content = get_link_text(link, ilink)
   link.target = clink.uri:gsub("%$$", ilink.name)
 end
 
@@ -585,7 +598,7 @@ local function Link(link)
 
   -- broken links
   if not clink then
-    return get_link_content(link)
+    return do_broken_interlink(link, ilink)
   end
 
   do_interlink(link, ilink, clink)
