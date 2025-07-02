@@ -518,7 +518,11 @@ end
 --- @return string | userdata
 local function get_link_text(link, ilink)
   if #link.content > 0 then
-    return pandoc.utils.stringify(link.content)
+    -- Previously we returned stringified content but that
+    -- gets rid of any markup e.g. If we have
+    --    [`a=b`](`package.module.object`)
+    -- we want the link text to be "<code>a=b</code>" and not plain "a=b"
+    return link.content
   elseif ilink.shortened then
     local tokens = split_on(ilink.name, ".")
     return tokens[#tokens]
